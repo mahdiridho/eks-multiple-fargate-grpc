@@ -3,7 +3,7 @@ name: CI/CD for EKS Deployment
 on:
   push:
     branches:
-      - master
+      - feature/*
 
 jobs:
   deploy:

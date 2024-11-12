@@ -1,29 +1,51 @@
+const express = require('express');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
-const express = require('express');
+const path = require('path');
 
-// gRPC setup
+const app = express();
+const port = 50051;
+
 const PROTO_PATH = './shared.proto';
 const packageDefinition = protoLoader.loadSync(PROTO_PATH);
 const grpcDemo = grpc.loadPackageDefinition(packageDefinition).grpcdemo;
 
-const client = new grpcDemo.Greeter('app2.app2.svc.cluster.local:50052', grpc.credentials.createInsecure());
+const grpcClient = new grpcDemo.Greeter('app2.app2.svc.cluster.local:50052', grpc.credentials.createInsecure());
 
-// Express server setup
-const app = express();
-const PORT = 50051;
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
-  client.SayHello({ name: 'from App1' }, (err, response) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/users', (req, res) => {
+  grpcClient.GetAllUsers({}, (err, response) => {
     if (err) {
-      console.error(err);
-      res.status(500).send('Error communicating with App2');
-    } else {
-      res.send(`Message from App2: ${response.message}`);
+      console.error('Error fetching users:', err);
+      return res.status(500).send('Failed to fetch users.');
     }
+    res.json(response.users);
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`App1 HTTP server running on port ${PORT}`);
+app.post('/submit', (req, res) => {
+  const { name, email, country } = req.body;
+
+  if (!name || !email || !country) {
+    return res.status(400).send('All fields are required.');
+  }
+
+  grpcClient.StoreUser({ name, email, country }, (err, response) => {
+    if (err) {
+      console.error('Error storing user:', err);
+      return res.status(500).send('Failed to store user.');
+    }
+
+    res.json({ message: response.message });
+  });
+});
+
+app.listen(port, () => {
+  console.log(`App1 server running on port ${port}`);
 });
