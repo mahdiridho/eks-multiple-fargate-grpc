@@ -6,6 +6,7 @@
       "es2020",
       "dom"
     ],
+    "outDir": "./cdk.out", // Specify output directory
     "declaration": true,
     "strict": true,
     "noImplicitAny": true,
@@ -27,5 +28,6 @@
   "exclude": [
     "node_modules",
     "cdk.out"
-  ]
+  ],
+  "include": ["bin/**/*", "lib/**/*"]
 }
