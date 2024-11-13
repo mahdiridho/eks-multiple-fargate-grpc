@@ -2,16 +2,17 @@ name: CI/CD for EKS Deployment
 
 on:
   push:
-    branches:
-      - feature/*
+    branches: ['feature/*', 'master']
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Enter operation (deploy or destroy)'
+        required: true
+        default: "deploy"
 
 jobs:
-  deploy:
+  run-cdk:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        operation: [deploy, destroy]
 
     steps:
       - name: Checkout Code
@@ -22,17 +23,18 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Dependencies
-        run: npm install
-      
-      - name: Compile TypeScript
-        run: npm run build
-      
       - name: Extract AWS Region
         id: extract-region
         run: |
           region=$(jq -r '.region' bin/config.json)
           echo "REGION=$region" >> $GITHUB_ENV
+          echo "AWS_IAM_USER=${{ secrets.AWS_IAM_USER }}" >> $GITHUB_ENV
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Compile TypeScript
+        run: npm run build
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -40,18 +42,21 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.REGION }}
-      
+
       - name: Bootstrap AWS Account
-        if: matrix.operation == 'deploy'
+        if: ${{ github.event.inputs.operation == 'deploy' }}
         run: npx cdk bootstrap --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess --force aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.REGION }}
 
-      - name: CDK Operation
+      - name: Run CDK Operation
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.REGION }}
         run: |
-          if [ "${{ matrix.operation }}" == "deploy" ]; then
+          if [ "${{ github.event.inputs.operation }}" == "deploy" ]; then
             npx cdk deploy --all --require-approval never --app "node cdk.out/bin/my-fargate-app-eks-multiple-grpc.js"
-          elif [ "${{ matrix.operation }}" == "destroy" ]; then
+          elif [ "${{ github.event.inputs.operation }}" == "destroy" ]; then
             npx cdk destroy --all --force --app "node cdk.out/bin/my-fargate-app-eks-multiple-grpc.js"
+          else
+            echo "Invalid operation: ${{ github.event.inputs.operation }}"
+            exit 1
           fi
