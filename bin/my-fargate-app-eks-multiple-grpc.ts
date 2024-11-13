@@ -7,7 +7,13 @@ import * as fs from 'fs';
 const regionConfig = JSON.parse(fs.readFileSync('./bin/config.json', 'utf-8'));
 const AWS_REGION = regionConfig.region;
 
+// Retrieve the AWS IAM User from the environment variable
+const AWS_IAM_USER = process.env.AWS_IAM_USER ?? (() => {
+  throw new Error('Environment variable AWS_IAM_USER is not defined.');
+})();
+
 console.log(`Deploying to region: ${AWS_REGION}`);
+console.log(`Default User: ${AWS_IAM_USER}`);
 
 const app = new cdk.App();
 new MyFargateAppEksMultipleGrpcStack(app, 'MyFargateAppEksMultipleGrpcStack', {
@@ -22,6 +28,7 @@ new MyFargateAppEksMultipleGrpcStack(app, 'MyFargateAppEksMultipleGrpcStack', {
   /* Uncomment the next line if you know exactly what Account and Region you
    * want to deploy the stack to. */
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: AWS_REGION },
+  defaultUser: AWS_IAM_USER, // Pass to stack
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });

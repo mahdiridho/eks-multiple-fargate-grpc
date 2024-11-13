@@ -7,8 +7,12 @@ import * as lambdaLayerKubectl from '@aws-cdk/lambda-layer-kubectl-v31';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 
+interface MyFargateAppEksProps extends cdk.StackProps {
+  defaultUser: string; // Add the property
+}
+
 export class MyFargateAppEksMultipleGrpcStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: MyFargateAppEksProps) {
     super(scope, id, props);
 
     // Step 1: Create a VPC
@@ -22,8 +26,11 @@ export class MyFargateAppEksMultipleGrpcStack extends cdk.Stack {
       kubectlLayer: new lambdaLayerKubectl.KubectlV31Layer(this, 'KubectlLayer')
     });
 
+    const defaultUser = props.defaultUser; // Use the passed variable
+    console.log(`Using Default User: ${defaultUser}`);
+
     // Use the existing IAM user
-    const existingUser = iam.User.fromUserName(this, 'ExistingUser', 'xcd');
+    const existingUser = iam.User.fromUserName(this, 'ExistingUser', defaultUser);
 
     // Map the IAM user to the cluster
     cluster.awsAuth.addUserMapping(existingUser, {
