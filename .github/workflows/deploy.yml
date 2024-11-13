@@ -9,6 +9,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        operation: [deploy, destroy]
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -38,10 +42,16 @@ jobs:
           aws-region: ${{ env.REGION }}
       
       - name: Bootstrap AWS Account
+        if: matrix.operation == 'deploy'
         run: npx cdk bootstrap --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess --force aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.REGION }}
 
-      - name: Deploy CDK Stack
+      - name: CDK Operation
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.REGION }}
-        run: npx cdk deploy --all --require-approval never --app "node cdk.out/bin/my-fargate-app-eks-multiple-grpc.js"
+        run: |
+          if [ "${{ matrix.operation }}" == "deploy" ]; then
+            npx cdk deploy --all --require-approval never --app "node cdk.out/bin/my-fargate-app-eks-multiple-grpc.js"
+          elif [ "${{ matrix.operation }}" == "destroy" ]; then
+            npx cdk destroy --all --force --app "node cdk.out/bin/my-fargate-app-eks-multiple-grpc.js"
+          fi
