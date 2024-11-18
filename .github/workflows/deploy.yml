@@ -2,7 +2,8 @@ name: CI/CD for EKS Deployment
 
 on:
   push:
-    branches: ['feature/*', 'master']
+    branches: 
+      - master
   workflow_dispatch:
     inputs:
       operation:
