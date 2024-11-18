@@ -4,15 +4,45 @@ package grpcdemo;
 
 // The service definition.
 service Greeter {
-  rpc SayHello (HelloRequest) returns (HelloReply);
+  // Stores a user in DynamoDB.
+  rpc StoreUser (User) returns (Response);
+
+  // Retrieves all users from DynamoDB.
+  rpc GetAllUsers (Empty) returns (UsersResponse);
 }
 
-// The request message containing the name.
-message HelloRequest {
+// The user data structure.
+message User {
   string name = 1;
+  string email = 2;
+  string country = 3;
 }
 
-// The response message containing the greeting.
-message HelloReply {
-  string message = 1;
+// The query structure for fetching a single user.
+message UserQuery {
+  string name = 1;
+  string email = 2;
 }
+
+// The response message for single user retrieval.
+message UserResponse {
+  string status = 1;
+  string message = 2;
+  User user = 3;
+}
+
+// The response message for all users retrieval.
+message UsersResponse {
+  string status = 1;
+  string message = 2;
+  repeated User users = 3; // List of users
+}
+
+// Generic response structure.
+message Response {
+  string status = 1;
+  string message = 2;
+}
+
+// Empty message for requests that do not require a payload.
+message Empty {}
